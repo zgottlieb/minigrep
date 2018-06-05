@@ -8,6 +8,10 @@ pub fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates t
     let mut contents = String::new();
     f.read_to_string(&mut contents)?;
 
+    for line in search(&config.query, &contents) {
+        println!("{}", line);
+    }
+
     Ok(())
 }
 
@@ -30,5 +34,39 @@ impl Config {
         let filename = args[2].clone();
 
         Ok(Config { query, filename })
+    }
+}
+
+//<'a> is a lifetime parameter, which specifies which argument lifetime is connected to the return value
+// This effectively tells rust that the data returned by `search` will live as long as the data passed via the contents arg
+// See Listing 12-16 in the Rust book
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let mut results = Vec::new();
+    
+    for line in contents.lines() { // .lines() allows for line-by-line iteration of string
+        if line.contains(query) {
+            results.push(line);
+        }
+    }
+
+    results
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn one_result() {
+        let query = "duct";
+        let contents = "\
+Rust:
+safe, fast, productive.
+Pick three.";
+
+        assert_eq!(
+            vec!["safe, fast, productive."], 
+            search(query, contents)
+        );
     }
 }
