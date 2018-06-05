@@ -2,6 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*; // many crates have a prelude, a set of commonly used types and functions into scope
 use std::process;
+use std::error::Error;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -13,15 +14,22 @@ fn main() {
 
     println!("Searching for... {}", config.query);
     println!("In file... {}", config.filename);
-    
-    let mut f = File::open(config.filename).expect("file not found"); // TODO: look further into .expect and when it should be used
+
+    if let Err(e) = run(config) {
+        println!("Application error: {}", e);
+        process::exit(1);
+    }
+}
+
+fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates that function will return a type that implements the Error trait, if an error occurs
+    let mut f = File::open(config.filename)?; // ? replaces .expect; on panic!, ? returns error value from current function
 
     let mut contents = String::new();
-
-    f.read_to_string(&mut contents)
-        .expect("something went wrong while reading");
+    f.read_to_string(&mut contents)?;
     
     println!("With text:\n{}", contents);
+
+    Ok(())
 }
 
 struct Config {
