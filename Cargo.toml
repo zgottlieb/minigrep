@@ -3,4 +3,8 @@ name = "minigrep"
 version = "0.1.0"
 authors = ["zjg"]
 
+[lib]
+name = "minigrep"
+path = "src/lib.rs"
+
 [dependencies]
