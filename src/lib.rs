@@ -20,7 +20,7 @@ pub fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates t
     };
 
     for line in results {
-        println!("{}", line);
+        print_highlighted_text(line, &config.query);
     }
 
     Ok(())
@@ -58,6 +58,30 @@ impl Config {
 
         Ok(config)
     }
+}
+
+// TODO: Make this function handle the --ignore-case flag!
+fn print_highlighted_text(line: &str, query: &str) {
+    let v: Vec<&str> = line.split(&query).collect();
+
+    let mut strings: Vec<ANSIString> = Vec::new();
+
+    if line.starts_with(query) {
+        strings.push(Red.bold().paint(query));
+    }
+
+    for (index, &chunk) in v.iter().enumerate() {
+        strings.push(ANSIString::from(chunk));
+        if index < v.len() - 1 {
+            strings.push(Red.bold().paint(query));
+        }
+    }
+
+    if line.ends_with(query) {
+        strings.push(Red.bold().paint(query));
+    }
+
+    println!("{}", ANSIStrings(&strings));
 }
 
 //<'a> is a lifetime parameter, which specifies which argument lifetime is connected to the return value

@@ -7,7 +7,6 @@ use minigrep::Config;
 
 fn main() {
     let args: env::Args = env::args();
-    println!("{:?}", args);
     
     let config = Config::new(args).unwrap_or_else(|err| {
         println!("Problem parsing arguments: {}", err);
