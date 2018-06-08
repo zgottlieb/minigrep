@@ -1,6 +1,11 @@
+extern crate ansi_term;
+
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*; // many crates have a prelude, a set of commonly used types and functions into scope
+use std::env;
+use ansi_term::Colour::Red;
+use ansi_term::{ANSIString, ANSIStrings};
 
 pub fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates that function will return a type that implements the Error trait, if an error occurs
     let mut f = File::open(config.filename)?; // ? replaces .expect; on panic!, ? returns error value from current function
@@ -8,7 +13,13 @@ pub fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates t
     let mut contents = String::new();
     f.read_to_string(&mut contents)?;
 
-    for line in search(&config.query, &contents) {
+    let results = if config.case_sensitive {
+        search(&config.query, &contents)
+    } else {
+        search_case_insensitive(&config.query, &contents)
+    };
+
+    for line in results {
         println!("{}", line);
     }
 
@@ -18,22 +29,34 @@ pub fn run(config: Config) -> Result<(), Box<Error>> { // Box<Error> Indicates t
 pub struct Config {
     pub query: String,
     pub filename: String,
+    pub case_sensitive: bool,
 }
 
 impl Config {
     // TODO: Write tests for `new`
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
+    // pub fn new(args: &[String]) -> Result<Config, &'static str> {
+    pub fn new(args: env::Args) -> Result<Config, &'static str>
+     {
+
+        // TODO: Determine if this is an acceptable way to handle creating a struct (e.g. making it mutable and changing values later)
+        // TODO: Determine a better way for handling CLI arguments and flags; create a map of args 
+        let mut config = Config {
+            query: "".to_string(),
+            filename: "".to_string(),
+            case_sensitive: true,
+        };
+
+        for arg in args.skip(1) {
+            if arg == "-i" || arg == "--ignore-case" {
+                config.case_sensitive = false;
+            } else if config.query.is_empty() {
+                config.query = arg.to_string();
+            } else {
+                config.filename = arg.to_string();
+            }
         }
 
-        // originally was using & to indicate that we want a reference to the item at the specified index, not the actual item
-        // now removing the & because we need to pass an actual String, not a ref; using clone to create a copy
-        // using .clone() has the disadvantage of using more memory and time, but it means we don't have to manage lifetimes of the references
-        let query = args[1].clone();
-        let filename = args[2].clone();
-
-        Ok(Config { query, filename })
+        Ok(config)
     }
 }
 
@@ -52,21 +75,50 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     results
 }
 
+pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let query = query.to_lowercase();
+    let mut results = Vec::new();
+    
+    for line in contents.lines() { // .lines() allows for line-by-line iteration of string
+        if line.to_lowercase().contains(&query) {
+            results.push(line);
+        }
+    }
+
+    results
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn one_result() {
+    fn case_sensitive() {
         let query = "duct";
         let contents = "\
 Rust:
 safe, fast, productive.
-Pick three.";
+Pick three.
+Duct tape.";
 
         assert_eq!(
             vec!["safe, fast, productive."], 
             search(query, contents)
+        );
+    }
+
+    #[test]
+    fn case_insensitive() {
+        let query = "rUsT";
+        let contents = "\
+Rust:
+safe, fast, productive.
+Pick three.
+Trust me.";
+
+        assert_eq!(
+            vec!["Rust:", "Trust me."],
+            search_case_insensitive(query, contents)
         );
     }
 }
