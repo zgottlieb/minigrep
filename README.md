@@ -1,4 +1,4 @@
-#minigrep
+# minigrep
 
 A basic command line text search tool based on the Unix utility `grep`.
 
